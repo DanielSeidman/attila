@@ -1,48 +1,5 @@
-import numpy as np
 from sklearn.neighbors import KernelDensity
 from collections import defaultdict
-
-### Warning: this code is implemented for testing purposes.
-### This should not be used in a production/research relese.
-
-############################
-# Handle train/test files: #
-############################
-
-def process_training_data(train_file):
-  training_data = defaultdict(lambda: [])
-
-  with open(train_file, 'r') as ifile:
-    for line in ifile:
-      IID1, IID2, REL_TYPE, IBD1, IBD2 = line.strip().split(',')
-      if REL_TYPE in ['parent', 'child']:
-        REL_TYPE = 'parent/child'
-      training_data[REL_TYPE].append( (float(IBD1), float(IBD2)) )
-
-    for category in training_data:
-      training_data[category] = np.array(training_data[category])
-
-  return training_data
-
-
-def process_test_data(test_file):
-  nodes = set()
-  test_data = []
-
-  with open(test_file, 'r') as ifile:
-    for line in ifile:
-      IID1, IID2, REL_TYPE, IBD1, IBD2 = line.strip().split(',')
-
-      nodes.add(IID1)
-      nodes.add(IID2)
-
-      test_data.append( ((IID1, IID2), (float(IBD1), float(IBD2))) )
-
-  nodes = list(nodes)
-  nodes.sort()
-
-  return nodes, test_data
-
 
 ##############################
 # Construct KDE classifiers: #

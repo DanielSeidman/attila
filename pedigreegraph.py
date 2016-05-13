@@ -1,10 +1,10 @@
-from edges import EdgeTable
-from edges import intersection
-from nodes import NodeTable
-from triples import build_generator
-from triples import decompose_triple
-from triples import TRIPLE_REDUCTIONS
-from triples import TripleStack
+from structures.edges import EdgeTable
+from structures.edges import intersection
+from structures.nodes import NodeTable
+from structures.triples import build_generator
+from structures.triples import decompose_triple
+from structures.triples import TRIPLE_REDUCTIONS
+from structures.triples import TripleStack
 import copy
 
 class GraphException(Exception):
