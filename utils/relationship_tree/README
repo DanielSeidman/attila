@@ -1,0 +1,12 @@
+Take in a .fam file and build a Population for every family.
+
+Using these trees, output a file providing the relationship between every pair of individuals in the dataset, ignoring pairs of people not in the same family.
+
+
+
+Two relationship measures:
+--------------------------
+
+1) Familial relationship calculated using distance to a common ancestor and given using classic namings: 'parent', 'child', 'sibling', etc.
+
+2) Relationship calculated in terms of the number of meioses between two people.
