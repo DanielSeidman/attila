@@ -5,7 +5,7 @@ import numpy as np
 from collections import defaultdict
 
 import sys
-sys.setrecursionlimit(10000)
+sys.setrecursionlimit(10000000)
 
 # WARNING: This script is arranged for testing purposes and is not intended for
 # a production or research setting.
