@@ -5,6 +5,7 @@ import numpy as np
 from collections import defaultdict
 
 import sys
+import time
 sys.setrecursionlimit(10000000)
 
 # WARNING: This script is arranged for testing purposes and is not intended for
@@ -83,6 +84,28 @@ def compute_accuracy(graph, test_file):
       print '%s: Truth: %s, Result: %s' % (str(pair), truth, result)
 
 
+###########################
+# Bit string conversions: #
+###########################
+
+def convert_to_bits(edges):
+  convert = lambda x: {'sibling': '0010', 'None': '0001', 'parent/child': '1100'}[x]
+  return [(pair, map(convert, candidates)) for pair, candidates in edges]
+
+
+###################################
+# Compute accuracy on the output: #
+###################################
+
+def preload_edges(graph, edges):
+  # Preload edges with exponential back-off
+  cutoff = len(edges)
+  while not graph.preload_graph(edges[:cutoff]) and cutoff > 0:
+    cutoff = cutoff / 2
+
+  return cutoff
+
+
 #################
 # Runner Logic: #
 #################
@@ -91,24 +114,41 @@ if __name__ == '__main__':
   train_file = sys.argv[1]
   test_file = sys.argv[2]
 
-  print 'Processing training data'
+  print 'Processing training data.'
   training_data = process_training_data(train_file)
-  print 'Processing test data'
+  print 'Processing test data.'
   nodes, test_data = process_test_data(test_file)
 
-  print 'Build classifiers'
+  print 'Build classifiers.'
   classifiers = classify_edges.build_classifiers(training_data, 0.1)
 
-  print 'Classifying edges'
-  edges = classify_edges.classify_edges(classifiers, test_data)
+  print 'Classifying edges.'
+  edges, null_edges = classify_edges.classify_edges(classifiers, test_data, split_null_edges=True, threshold=2)
 
-  # Convert the relationships into bitstrings
-  lookup = {'sibling': '0010', 'None': '0001', 'parent/child': '1100'}
-  convert = lambda x: lookup[x]
-  bit_edges = [(pair, map(convert, candidates)) for pair, candidates in edges]
+  print 'Number of edges: %d' % len(edges)
+  print 'Number of null edges: %d' % len(null_edges)
+
+  # Convert the edges into bit string form
+  bit_edges = convert_to_bits(edges)
+  bit_null_edges = convert_to_bits(null_edges)
+
+  # Drop all but None edges from the null edges
+  bit_null_edges_filtered = [(pair, candidates[0]) for pair, candidates in bit_null_edges]
 
   # Build PedigreeGraph
   graph = pedigreegraph.PedigreeGraph(nodes)
+
+  print 'Preloading null edges: %d' % len(bit_null_edges)
+  # Preload the null edges in the graph
+  cutoff = preload_edges(graph, bit_null_edges_filtered)
+  print '%d edges were rejected during preloading.' % (len(bit_null_edges) - cutoff)
+
+  # Drop the preloaded null edges from the edge stack
+  for edge in bit_null_edges[:cutoff]:
+    bit_edges.remove(edge)
+
+  # Set the graph to use connected components
+  graph.use_components()
 
   print 'Total number of edges: %d' % len(bit_edges)
   result = backtrack_search.backtrack_search(graph, bit_edges[0], bit_edges[1:])

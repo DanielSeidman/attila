@@ -41,7 +41,16 @@ def confidence_vector(classifiers, data):
   return confidences
 
 
-def classify_edges(classifiers, test_data):
+def filter_edges(edges):
+  # Drop confidence information
+  filtered = []
+  for pair, candidates in edges:
+    filtered.append((pair, map(lambda t: t[0], candidates)))
+
+  return filtered
+
+
+def classify_edges(classifiers, test_data, split_null_edges=True, threshold=2):
   import warnings
   warnings.filterwarnings("ignore")
 
@@ -56,9 +65,19 @@ def classify_edges(classifiers, test_data):
   edges = sorted(edges, key=lambda t: t[1][0][1])
   edges.reverse()
 
-  # Drop confidence information once the edges are sorted
-  filtered = []
-  for pair, candidates in edges:
-    filtered.append((pair, map(lambda t: t[0], candidates)))
+  # split out null edges
+  null_edges = []
 
-  return filtered
+  if split_null_edges:
+    for edge in edges:
+      pair, confidences = edge
+
+      first_type, first_confidence = confidences[0]
+      second_type, second_confidence = confidences[1]
+
+      if first_type == 'None':
+        diff = first_confidence - second_confidence
+        if diff > threshold:
+          null_edges.append(edge)
+
+  return filter_edges(edges), filter_edges(null_edges)
