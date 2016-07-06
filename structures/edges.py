@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+import sys
+
 ##############
 # Edge logic #
 ##############
@@ -49,3 +51,32 @@ class EdgeTable:
   def __setitem__(self, pair, value):
     assert self._orderTest(*pair)
     self._table[pair] = value
+
+  def diff(self, other):
+    # This variable should not be called pairs.
+
+    # Output all keys in other that have a value different from their value
+    # in this EdgeTable along with their values.
+    # Assumption: other does not contain any keys not in this EdgeTable, other
+    # is strictly "older".
+    pairs = {}
+
+    # Untouched keys, these are the keys with the starting value in other
+    untouched = set(self._table.keys()).difference(set(other._table.keys()))
+    pairs['del'] = untouched
+    pairs['revert'] = {}
+
+    for key in other._table.keys():
+      if other[key] != self[key]:
+        pairs['revert'][key] = other[key]
+
+    if pairs['del'] or pairs['revert']:
+      return pairs
+    return None
+
+  def revert(self, edges):
+    if edges:
+      for pair in edges['del']:
+        del self._table[pair]
+      for pair in edges['revert']:
+        self._table[pair] = edges['revert'][pair]

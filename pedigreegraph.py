@@ -9,13 +9,14 @@ from structures.triples import TripleStack
 from collections import defaultdict
 
 import copy
+import sys
 
 class GraphException(Exception):
   def __init__(self, message):
     self.message = message
 
 class PedigreeGraph:
-  def __init__(self, nodes=[], emptyEdge='0000', fullEdge='1111', nullEdge='0001', edgeLimit=2): # Defaults are set to the existing triple reductions
+  def __init__(self, nodes=[], emptyEdge='0000', fullEdge='1111', nullEdge='0001', edgeLimit=2, keepHistory=True): # Defaults are set to the existing triple reductions
     # This implementation uses the default ordering functions
     self.initial_nodes = nodes
     self.emptyEdge = emptyEdge
@@ -31,23 +32,31 @@ class PedigreeGraph:
     self.componentMap = None
     self.tripleGenerators = None
 
-
-  def copy(self):
-    new = PedigreeGraph()
-
-    new.tripleGenerator = self.tripleGenerator
-    new.emptyEdge = self.emptyEdge
-    new.edges = copy.deepcopy(self.edges)
-    new.nodes = copy.deepcopy(self.nodes)
-    new.useComponents = self.useComponents
-    new.componentMap = self.componentMap
-    new.tripleGenerators = self.tripleGenerators
-
-    return new
+    self.keepHistory = keepHistory
+    self.history = []
 
 
   def get(self, pair):
     return self.edges[pair]
+
+
+  def revert(self):
+    # Step the graph history back one step.
+    # Pass the appropriate structures to edges and nodes.
+
+    # history looks like:
+    # ( pair, (edges, nodes))
+    # where edges looks like {'revert': {}, 'del' []}
+    # All keys in del should be deleted
+    # All pair values in revert should be set to these old values
+
+    if self.history:
+      lastPair, edges, nodes = self.history.pop()
+
+      self.edges.revert(edges)
+      self.nodes.revert(nodes)
+
+      return lastPair
 
 
   def find_components(self):
@@ -98,7 +107,7 @@ class PedigreeGraph:
     self.useComponents = True
 
 
-  def _update_and_reduce_graph(self, edges):
+  def _update_and_reduce_graph(self, edges, keepHistory):
     # Takes in a list of (pair, edge) tuples.
     # Insert the given edges into the graph and then reduce the graph,
     # returning True if the resulting graph is consistent and returning False
@@ -177,7 +186,10 @@ class PedigreeGraph:
             # Add all affected triples to the stack
             map(lambda t: stack.add(t), tripleGenerator(*pair, c=excludedNode))
 
-        # (3) Once the stack is empty, return True.
+      if keepHistory:
+        self.history.append((pair, self.edges.diff(oldEdges), self.nodes.diff(oldNodes)))
+
+      # (3) Once the stack is empty, return True.
       return True
     except GraphException as e:
       # The graph state is illegal, so reject the edge.
@@ -191,7 +203,7 @@ class PedigreeGraph:
 
   def preload_graph(self, edges):
     # Insert all of the given edges and reduce the graph.
-    return self._update_and_reduce_graph(edges)
+    return self._update_and_reduce_graph(edges, False)
 
 
   def add(self, pair, edge):
@@ -206,6 +218,10 @@ class PedigreeGraph:
 
     if result == currentEdge:
       print 'The added edge changed nothing.'
+
+      if self.keepHistory:
+        self.history.append((pair, None, None))
+
       return True
     elif result == self.emptyEdge:
       print 'The added edge introduced a contradiction.'
@@ -213,4 +229,4 @@ class PedigreeGraph:
     else:
       # These copies are restored if a contradiction is found when processing
       # the added edge.
-      return self._update_and_reduce_graph([(pair, edge)])
+      return self._update_and_reduce_graph([(pair, edge)], self.keepHistory)

@@ -113,6 +113,16 @@ def preload_edges(graph, edges):
 if __name__ == '__main__':
   train_file = sys.argv[1]
   test_file = sys.argv[2]
+  preload_edges_arg = sys.argv[3]
+  use_components_arg = sys.argv[4]
+
+  PRELOAD = False
+  if preload_edges_arg == 'yes':
+    PRELOAD = True
+
+  COMPONENTS = False
+  if use_components_arg == 'yes':
+    COMPONENTS = True
 
   print 'Processing training data.'
   training_data = process_training_data(train_file)
@@ -138,17 +148,19 @@ if __name__ == '__main__':
   # Build PedigreeGraph
   graph = pedigreegraph.PedigreeGraph(nodes)
 
-  print 'Preloading null edges: %d' % len(bit_null_edges)
-  # Preload the null edges in the graph
-  cutoff = preload_edges(graph, bit_null_edges_filtered)
-  print '%d edges were rejected during preloading.' % (len(bit_null_edges) - cutoff)
+  if PRELOAD:
+    print 'Preloading null edges: %d' % len(bit_null_edges)
+    # Preload the null edges in the graph
+    cutoff = preload_edges(graph, bit_null_edges_filtered)
+    print '%d edges were rejected during preloading.' % (len(bit_null_edges) - cutoff)
 
-  # Drop the preloaded null edges from the edge stack
-  for edge in bit_null_edges[:cutoff]:
-    bit_edges.remove(edge)
+    # Drop the preloaded null edges from the edge stack
+    for edge in bit_null_edges[:cutoff]:
+      bit_edges.remove(edge)
 
-  # Set the graph to use connected components
-  graph.use_components()
+  if COMPONENTS:
+    # Set the graph to use connected components
+    graph.use_components()
 
   print 'Total number of edges: %d' % len(bit_edges)
   result = backtrack_search.backtrack_search(graph, bit_edges[0], bit_edges[1:])
